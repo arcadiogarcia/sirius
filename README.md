@@ -1,5 +1,10 @@
 # Sirius Updater
 
+[![CI](https://github.com/arcadiogarcia/sirius/actions/workflows/ci.yml/badge.svg)](https://github.com/arcadiogarcia/sirius/actions/workflows/ci.yml)
+[![NuGet Sirius.Updater](https://img.shields.io/nuget/v/Sirius.Updater.svg?label=Sirius.Updater)](https://www.nuget.org/packages/Sirius.Updater/)
+[![NuGet Sirius.Updater.WinUI](https://img.shields.io/nuget/v/Sirius.Updater.WinUI.svg?label=Sirius.Updater.WinUI)](https://www.nuget.org/packages/Sirius.Updater.WinUI/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 > Drop-in self-update for sideloaded WinUI 3 / Windows App SDK applications,
 > backed by **GitHub Releases**. Public and private repositories. No third-party
 > update framework. No installer chrome. No UAC prompts on the happy path.
@@ -222,6 +227,12 @@ For full control, supply `Options.AssetSelector` — a `Func<UpdateAssetSelectio
 
 Pre-1.0. The public surface is stable for the use cases above but may
 evolve as additional update sources, channels, and rollback flows land.
+
+## Releasing
+
+Tag-driven publish via GitHub Actions — see [docs/RELEASING.md](docs/RELEASING.md).
+TL;DR: `git tag v0.2.0 && git push origin v0.2.0` builds, packs, creates a
+GitHub Release, and pushes both NuGet packages.
 
 ## License
 

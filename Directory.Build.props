@@ -18,7 +18,7 @@
     <Company>Sirius Updater</Company>
     <Product>Sirius Updater</Product>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/sirius-updater/sirius-updater</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/arcadiogarcia/sirius</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <IncludeSymbols>true</IncludeSymbols>
@@ -27,11 +27,13 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <DebugType>portable</DebugType>
 
-    <!-- Single source of truth for the library version. -->
-    <SiriusUpdaterVersion Condition="'$(SiriusUpdaterVersion)' == ''">0.1.0</SiriusUpdaterVersion>
-    <Version>$(SiriusUpdaterVersion)</Version>
-    <AssemblyVersion>$(SiriusUpdaterVersion).0</AssemblyVersion>
-    <FileVersion>$(SiriusUpdaterVersion).0</FileVersion>
+    <!-- Version handling uses the built-in VersionPrefix + VersionSuffix
+         pair. VersionPrefix must be strict MAJOR.MINOR.BUILD and is the
+         only source of AssemblyVersion / FileVersion. VersionSuffix
+         carries any prerelease tag (e.g. "rc.1") and only affects the
+         NuGet PackageVersion / InformationalVersion. CI passes
+         -p:VersionPrefix=… -p:VersionSuffix=… as appropriate. -->
+    <VersionPrefix Condition="'$(VersionPrefix)' == ''">0.1.0</VersionPrefix>
   </PropertyGroup>
 
   <ItemGroup>

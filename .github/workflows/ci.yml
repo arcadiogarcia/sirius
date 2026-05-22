@@ -1,0 +1,68 @@
+name: CI
+
+# Build + test on every push and PR (except tag pushes — those are the
+# release workflow's job).
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore Sirius.Updater.sln
+
+      - name: Build core (Sirius.Updater)
+        run: dotnet build src/Sirius.Updater/Sirius.Updater.csproj -c Release --no-restore
+
+      - name: Build WinUI integration (x64)
+        run: dotnet build src/Sirius.Updater.WinUI/Sirius.Updater.WinUI.csproj -c Release -p:Platform=x64 --no-restore
+
+      - name: Build WinUI integration (ARM64)
+        run: dotnet build src/Sirius.Updater.WinUI/Sirius.Updater.WinUI.csproj -c Release -p:Platform=ARM64 --no-restore
+
+      - name: Test
+        run: dotnet test tests/Sirius.Updater.Tests/Sirius.Updater.Tests.csproj -c Release --no-build --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/TestResults/*.trx'
+          if-no-files-found: ignore
+
+      - name: Pack (dry run)
+        # Pack with a placeholder prerelease version to catch packaging
+        # errors on every commit — actual published versions only come
+        # from tag pushes via release.yml.
+        run: |
+          dotnet pack src/Sirius.Updater/Sirius.Updater.csproj `
+            -c Release --no-build `
+            -p:VersionSuffix=ci.${{ github.run_number }} `
+            -o artifacts
+          dotnet pack src/Sirius.Updater.WinUI/Sirius.Updater.WinUI.csproj `
+            -c Release --no-build -p:Platform=x64 `
+            -p:VersionSuffix=ci.${{ github.run_number }} `
+            -o artifacts
+
+      - name: Upload nupkgs
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages-ci
+          path: artifacts/*.nupkg
