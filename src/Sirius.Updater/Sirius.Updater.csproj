@@ -13,7 +13,7 @@
     <UseWindowsForms>false</UseWindowsForms>
     <UseWpf>false</UseWpf>
 
-    <PackageId>Sirius.Updater</PackageId>
+    <PackageId>SiriusUpdater</PackageId>
     <Description>
       Drop-in GitHub-Releases self-updater for sideloaded WinUI 3 / Windows
       App SDK MSIX applications. Supports public and private repositories

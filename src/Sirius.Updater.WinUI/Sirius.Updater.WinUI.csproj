@@ -13,7 +13,7 @@
     <Platforms>x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
 
-    <PackageId>Sirius.Updater.WinUI</PackageId>
+    <PackageId>SiriusUpdater.WinUI</PackageId>
     <Description>
       WinUI 3 integration for Sirius Updater. Provides a ContentDialog-based
       sign-in + progress UX (IUpdateUi) and a drop-in UpdateButton control.

@@ -41,7 +41,7 @@ prefix so they don't trip CS7034/CS7035.
 
 Create the API key at <https://www.nuget.org/account/apikeys> with
 scope `Push new packages and package versions` and glob
-`Sirius.Updater*`.
+`SiriusUpdater*`.
 
 ## CI
 

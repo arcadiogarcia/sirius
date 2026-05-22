@@ -1,8 +1,8 @@
 # Sirius Updater
 
 [![CI](https://github.com/arcadiogarcia/sirius/actions/workflows/ci.yml/badge.svg)](https://github.com/arcadiogarcia/sirius/actions/workflows/ci.yml)
-[![NuGet Sirius.Updater](https://img.shields.io/nuget/v/Sirius.Updater.svg?label=Sirius.Updater)](https://www.nuget.org/packages/Sirius.Updater/)
-[![NuGet Sirius.Updater.WinUI](https://img.shields.io/nuget/v/Sirius.Updater.WinUI.svg?label=Sirius.Updater.WinUI)](https://www.nuget.org/packages/Sirius.Updater.WinUI/)
+[![NuGet SiriusUpdater](https://img.shields.io/nuget/v/SiriusUpdater.svg?label=SiriusUpdater)](https://www.nuget.org/packages/SiriusUpdater/)
+[![NuGet SiriusUpdater.WinUI](https://img.shields.io/nuget/v/SiriusUpdater.WinUI.svg?label=SiriusUpdater.WinUI)](https://www.nuget.org/packages/SiriusUpdater.WinUI/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > Drop-in self-update for sideloaded WinUI 3 / Windows App SDK applications,
@@ -33,8 +33,8 @@ moment" so users always know an update is in flight.
 
 | Package | Purpose |
 |---|---|
-| [`Sirius.Updater`](src/Sirius.Updater)             | Core library. Zero XAML deps. `SiriusUpdater` facade, GitHub source, Device Flow, DPAPI token cache, MSIX installer, abstractions for everything. |
-| [`Sirius.Updater.WinUI`](src/Sirius.Updater.WinUI) | WinUI 3 surface. `ContentDialogUpdateUi` (sign-in + progress) and a drop-in `UpdateButton` titlebar control. |
+| [`SiriusUpdater`](src/Sirius.Updater)             | Core library. Zero XAML deps. `SiriusUpdater` facade, GitHub source, Device Flow, DPAPI token cache, MSIX installer, abstractions for everything. |
+| [`SiriusUpdater.WinUI`](src/Sirius.Updater.WinUI) | WinUI 3 surface. `ContentDialogUpdateUi` (sign-in + progress) and a drop-in `UpdateButton` titlebar control. |
 
 ## Quickstart
 
@@ -42,8 +42,8 @@ moment" so users always know an update is in flight.
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="Sirius.Updater"       Version="0.1.0" />
-  <PackageReference Include="Sirius.Updater.WinUI" Version="0.1.0" />
+  <PackageReference Include="SiriusUpdater"       Version="0.1.0" />
+  <PackageReference Include="SiriusUpdater.WinUI" Version="0.1.0" />
 </ItemGroup>
 ```
 
