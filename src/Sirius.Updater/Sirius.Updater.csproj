@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!--
+      Core library has zero XAML / WindowsAppSDK dependencies so it can
+      be unit-tested headless and re-hosted under any UI framework.
+      Targets net10.0-windows for Package.Current (AUMID + version)
+      and DPAPI; nothing in here pulls WinUI.
+    -->
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>Sirius.Updater</RootNamespace>
+    <AssemblyName>Sirius.Updater</AssemblyName>
+    <UseWindowsForms>false</UseWindowsForms>
+    <UseWpf>false</UseWpf>
+
+    <PackageId>Sirius.Updater</PackageId>
+    <Description>
+      Drop-in GitHub-Releases self-updater for sideloaded WinUI 3 / Windows
+      App SDK MSIX applications. Supports public and private repositories
+      (OAuth Device Flow), DPAPI-encrypted token caching, signed-MSIX
+      Add-AppxPackage installs with automatic restart, and progress
+      reporting. No third-party update framework required.
+    </Description>
+    <PackageTags>winui;winappsdk;msix;auto-update;github-releases;sideload</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Pack the repo README as the NuGet readme. -->
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

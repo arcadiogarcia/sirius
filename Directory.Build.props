@@ -1,0 +1,41 @@
+<Project>
+  <!--
+    Shared build properties for every project in the Sirius Updater
+    solution. Centralising language version, nullability, packaging
+    metadata, and analyzer flags here keeps individual csproj files
+    short and consistent.
+  -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest</AnalysisLevel>
+
+    <!-- NuGet packaging defaults (overridable per-project). -->
+    <Authors>Sirius Updater contributors</Authors>
+    <Company>Sirius Updater</Company>
+    <Product>Sirius Updater</Product>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/sirius-updater/sirius-updater</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>portable</DebugType>
+
+    <!-- Single source of truth for the library version. -->
+    <SiriusUpdaterVersion Condition="'$(SiriusUpdaterVersion)' == ''">0.1.0</SiriusUpdaterVersion>
+    <Version>$(SiriusUpdaterVersion)</Version>
+    <AssemblyVersion>$(SiriusUpdaterVersion).0</AssemblyVersion>
+    <FileVersion>$(SiriusUpdaterVersion).0</FileVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Tests/sample don't need the readme; library projects opt in by
+         declaring their own <ItemGroup> that picks the root README. -->
+  </ItemGroup>
+</Project>

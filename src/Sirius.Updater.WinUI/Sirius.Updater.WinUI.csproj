@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!--
+      The WinUI integration. Carries the WindowsAppSDK reference so
+      consumers who already depend on WindowsAppSDK don't double-pay
+      for it. UseWinUI=true wires up the XAML compiler.
+    -->
+    <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>Sirius.Updater.WinUI</RootNamespace>
+    <AssemblyName>Sirius.Updater.WinUI</AssemblyName>
+    <UseWinUI>true</UseWinUI>
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+
+    <PackageId>Sirius.Updater.WinUI</PackageId>
+    <Description>
+      WinUI 3 integration for Sirius Updater. Provides a ContentDialog-based
+      sign-in + progress UX (IUpdateUi) and a drop-in UpdateButton control.
+    </Description>
+    <PackageTags>winui;winappsdk;msix;auto-update;github-releases;ux</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.0.1" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sirius.Updater\Sirius.Updater.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>
