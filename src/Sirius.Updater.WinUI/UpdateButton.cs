@@ -8,8 +8,7 @@ namespace Sirius.Updater.WinUI;
 
 /// <summary>
 /// Drop-in titlebar/toolbar button that wires up a one-click
-/// "check + install" flow against a <see cref="SiriusUpdater"/>. Mirrors
-/// the UX of the original Radiant ⟳ button:
+/// "check + install" flow against a <see cref="SiriusUpdater"/>:
 /// <list type="bullet">
 ///   <item>Single click = check, and if a newer release exists, install
 ///         (no confirmation dialog — pressing the button is the
