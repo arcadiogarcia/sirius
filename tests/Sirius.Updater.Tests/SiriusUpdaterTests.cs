@@ -76,6 +76,52 @@ public class SiriusUpdaterTests
         Assert.Equal("ASSET_NOT_FOUND", r.Error);
     }
 
+    [Fact]
+    public async Task NullUpdateUi_PresentAsync_throws_with_actionable_message()
+    {
+        var info = new DeviceCodeInfo(
+            UserCode:                "ABCD-1234",
+            VerificationUri:         "https://github.com/login/device",
+            ExpiresIn:               TimeSpan.FromMinutes(15),
+            VerificationUriComplete: null,
+            SuggestedLogin:          null);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => NullUpdateUi.Instance.PresentAsync(info, default));
+
+        // Message should point the consumer at the standard remedies so
+        // a silent 15-minute hang turns into a discoverable failure.
+        Assert.Contains("WithWinUI",                ex.Message);
+        Assert.Contains("Services.Ui",              ex.Message);
+        Assert.Contains("GH_TOKEN",                 ex.Message);
+    }
+
+    [Fact]
+    public async Task CheckAsync_surfaces_NullUpdateUi_guard_via_CHECK_FAILED()
+    {
+        // A source that demands auth + default token store (no tokens) +
+        // default NullUpdateUi UI = the exact footgun shape we're guarding
+        // against. The updater should bubble a CHECK_FAILED result whose
+        // message names the WithWinUI remedy, not a 15-minute hang.
+        var u = new SiriusUpdater(new SiriusUpdaterOptions
+        {
+            Repository  = "owner/private-repo",
+            ProductName = "MyApp",
+            Services = new SiriusUpdaterServices
+            {
+                Source     = new AuthRequiredSource(),
+                Host       = new FakeHost(new Version(1, 0, 0, 0), "x64"),
+                TokenStore = new InMemoryTokenStore(),
+                Ui         = NullUpdateUi.Instance,
+            },
+        });
+
+        var r = await u.CheckAsync();
+        Assert.False(r.Success);
+        Assert.Equal("CHECK_FAILED", r.Error);
+        Assert.Contains("WithWinUI", r.Message ?? string.Empty);
+    }
+
     static SiriusUpdater BuildUpdater(UpdateRelease release, Version version, string arch = "x64")
     {
         return new SiriusUpdater(new SiriusUpdaterOptions
@@ -103,6 +149,17 @@ public class SiriusUpdaterTests
             => Task.FromResult(_release);
         public Uri ResolveAssetDownloadUri(UpdateAsset asset) =>
             new(asset.ApiDownloadUri ?? asset.BrowserDownloadUri ?? "https://example.com/asset");
+    }
+
+    sealed class AuthRequiredSource : IUpdateSource
+    {
+        public string ChannelId       => "auth-required";
+        public string? SuggestedLogin => "owner";
+        public Task<UpdateRelease> GetLatestAsync(
+            System.Net.Http.HttpClient http, string? token, bool includePreReleases, CancellationToken cancel)
+            => throw new SourceAuthRequiredException("simulated 404 on private repo");
+        public Uri ResolveAssetDownloadUri(UpdateAsset asset) =>
+            new("https://example.com/asset");
     }
 
     sealed class FakeHost : IHostApplication

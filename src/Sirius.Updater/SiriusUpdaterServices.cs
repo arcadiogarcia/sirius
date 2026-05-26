@@ -35,8 +35,16 @@ public sealed class SiriusUpdaterServices
     /// defaults to <c>PackagedHostApplication</c>.</summary>
     public IHostApplication? Host { get; init; }
 
-    /// <summary>Update UI — defaults to <c>NullUpdateUi</c> (no UI). The
-    /// WinUI integration package wires up <c>ContentDialogUpdateUi</c>.</summary>
+    /// <summary>
+    /// Update UI — defaults to <see cref="NullUpdateUi"/>, a fail-fast
+    /// sentinel that throws <see cref="InvalidOperationException"/> from
+    /// its <c>PresentAsync</c> rather than silently hanging on a
+    /// Device-Flow poll the user can't see. Set this to a real UI (the
+    /// WinUI integration ships <c>ContentDialogUpdateUi</c>) before
+    /// triggering an update that may require interactive auth. Set it
+    /// explicitly to <c>null</c> to opt into silent headless polling
+    /// (e.g. a console host that prints the user code itself).
+    /// </summary>
     public IUpdateUi? Ui { get; init; }
 
     /// <summary>Diagnostic log sink — defaults to
