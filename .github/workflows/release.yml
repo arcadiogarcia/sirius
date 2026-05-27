@@ -100,9 +100,23 @@ jobs:
             -p:SiriusBuildDate=${{ steps.stamp.outputs.BUILD_DATE }}
 
       - name: Build tests
+        # MUST forward VersionPrefix here too: the test project has a
+        # ProjectReference to src/Sirius.Updater, so MSBuild rebuilds
+        # Sirius.Updater.dll into the SAME bin\Release output that the
+        # subsequent `dotnet pack --no-build` will pack. If we omit
+        # VersionPrefix the rebuild silently falls back to the
+        # Directory.Build.props default (0.1.0), overwrites the
+        # correctly-stamped DLL produced by "Build core", and ships a
+        # nupkg whose AssemblyVersion doesn't match its PackageVersion.
+        # Consumers then fail at runtime with FileNotFoundException
+        # when SiriusUpdater.WinUI tries to load the (non-existent)
+        # matching Sirius.Updater assembly version.
         run: |
           dotnet build tests/Sirius.Updater.Tests/Sirius.Updater.Tests.csproj `
-            -c Release --no-restore
+            -c Release --no-restore `
+            -p:VersionPrefix=${{ steps.version.outputs.PREFIX }} `
+            -p:VersionSuffix=${{ steps.version.outputs.SUFFIX }} `
+            -p:SiriusBuildDate=${{ steps.stamp.outputs.BUILD_DATE }}
 
       - name: Test
         run: dotnet test tests/Sirius.Updater.Tests/Sirius.Updater.Tests.csproj -c Release --no-build --logger "trx;LogFileName=test-results.trx"
@@ -131,6 +145,43 @@ jobs:
       - name: List packages
         shell: pwsh
         run: Get-ChildItem artifacts | Format-Table Name, Length
+
+      - name: Verify nupkg assembly versions match tag
+        # Defense in depth: if a future workflow edit ever re-introduces
+        # the "transitive ProjectReference rebuild overwrites the stamped
+        # DLL" bug, fail the release here instead of shipping a broken
+        # package. We crack each .nupkg open as a zip and confirm every
+        # bundled Sirius assembly has AssemblyVersion == ${PREFIX}.0
+        # (the canonical 4-part form .NET emits from VersionPrefix).
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $expected = "${{ steps.version.outputs.PREFIX }}.0"
+          $bad = @()
+          foreach ($nupkg in Get-ChildItem artifacts\*.nupkg) {
+              $zip = [System.IO.Compression.ZipFile]::OpenRead($nupkg.FullName)
+              try {
+                  foreach ($entry in $zip.Entries) {
+                      if ($entry.FullName -notlike 'lib/*Sirius.Updater*.dll') { continue }
+                      $tmp = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), [System.IO.Path]::GetRandomFileName() + '.dll')
+                      [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $tmp, $true)
+                      try {
+                          $asm = [System.Reflection.AssemblyName]::GetAssemblyName($tmp)
+                          Write-Host "  $($nupkg.Name) :: $($entry.FullName) -> $($asm.Version)"
+                          if ($asm.Version.ToString() -ne $expected) {
+                              $bad += "$($nupkg.Name) :: $($entry.FullName) has AssemblyVersion=$($asm.Version), expected $expected"
+                          }
+                      } finally { Remove-Item $tmp -ErrorAction SilentlyContinue }
+                  }
+              } finally { $zip.Dispose() }
+          }
+          if ($bad.Count -gt 0) {
+              Write-Host "::error::Assembly-version mismatch detected in built nupkgs:"
+              $bad | ForEach-Object { Write-Host "::error::  $_" }
+              throw "Refusing to publish a release whose assembly version doesn't match the git tag."
+          }
+          Write-Host "All bundled Sirius.Updater assemblies report AssemblyVersion=$expected. OK."
 
       - name: Upload nupkg artifacts
         uses: actions/upload-artifact@v4
