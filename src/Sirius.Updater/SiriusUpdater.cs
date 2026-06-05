@@ -86,6 +86,19 @@ public sealed class SiriusUpdater : IDisposable
     /// <summary>Channel id for diagnostic display.</summary>
     public string ChannelId => _source.ChannelId;
 
+    /// <summary>The active token store. Exposed so sibling Sirius
+    /// modules (e.g. <see cref="Sirius.Updater.Feedback.SiriusFeedback"/>)
+    /// can share the same cache.</summary>
+    public Sirius.Updater.TokenStore.ITokenStore TokenStore => _tokenStore;
+
+    /// <summary>The active authenticator. Exposed so sibling Sirius
+    /// modules can share the same Device-Flow client + scopes.</summary>
+    public Sirius.Updater.Auth.IAuthenticator Authenticator => _authenticator;
+
+    /// <summary>The active update UI. Exposed so sibling modules can
+    /// route their own auth flow through the same dialog.</summary>
+    public Sirius.Updater.Ui.IUpdateUi Ui => _ui;
+
     /// <summary>
     /// Returns a non-rendering UX-less updater clone with the supplied UI
     /// wired in. Useful for late binding when the UI isn't available at

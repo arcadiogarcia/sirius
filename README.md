@@ -1,19 +1,21 @@
-# Sirius Updater
+# Sirius
 
 [![CI](https://github.com/arcadiogarcia/sirius/actions/workflows/ci.yml/badge.svg)](https://github.com/arcadiogarcia/sirius/actions/workflows/ci.yml)
 [![NuGet SiriusUpdater](https://img.shields.io/nuget/v/SiriusUpdater.svg?label=SiriusUpdater)](https://www.nuget.org/packages/SiriusUpdater/)
 [![NuGet SiriusUpdater.WinUI](https://img.shields.io/nuget/v/SiriusUpdater.WinUI.svg?label=SiriusUpdater.WinUI)](https://www.nuget.org/packages/SiriusUpdater.WinUI/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> Drop-in self-update for sideloaded WinUI 3 / Windows App SDK applications,
-> backed by **GitHub Releases**. Public and private repositories. No third-party
-> update framework. No installer chrome. No UAC prompts on the happy path.
+> Drop-in self-update **and user-feedback** for sideloaded WinUI 3 / Windows
+> App SDK applications, backed by **GitHub Releases** and **GitHub Issues**.
+> Public and private repositories. No third-party update framework. No
+> installer chrome. No UAC prompts on the happy path. One shared sign-in
+> for both update and feedback flows.
 
 ---
 
 ## What it does
 
-Sirius Updater turns a `Check for updates` click into:
+**Sirius Updater** turns a `Check for updates` click into:
 
 1. **Look up** the latest release on GitHub for your `owner/repo`.
 2. **Authenticate** if the repo is private — GitHub OAuth Device Flow, using
@@ -29,12 +31,27 @@ All inside a single `ContentDialog` that morphs from "enter code" to
 "downloading 12.3 MiB of 18.4 MiB (66.8%)" to "installing — restarting in a
 moment" so users always know an update is in flight.
 
+**Sirius Feedback** turns a `Send feedback` click into:
+
+1. **Compose** dialog — title + multi-line markdown body + a list of
+   attachments (each with a preview thumbnail for images and a checkbox
+   to opt-out).
+2. **Sign in** — reuses the same GitHub token the updater cached, so
+   most users skip Device Flow entirely.
+3. **Upload attachments** — one commit on a dedicated orphan branch in
+   the configured repo. Images render inline in the issue; logs over
+   the inline cap link out to the committed file; small text logs are
+   inlined as `<details>` blocks.
+4. **File the issue** via `POST /repos/{owner/repo}/issues`.
+5. **Confirm** with a "View on GitHub" hyperlink and return the
+   `IssueUrl` + `IssueNumber` to the calling app.
+
 ## Packages
 
 | Package | Purpose |
 |---|---|
-| [`SiriusUpdater`](src/Sirius.Updater)             | Core library. Zero XAML deps. `SiriusUpdater` facade, GitHub source, Device Flow, DPAPI token cache, MSIX installer, abstractions for everything. |
-| [`SiriusUpdater.WinUI`](src/Sirius.Updater.WinUI) | WinUI 3 surface. `ContentDialogUpdateUi` (sign-in + progress) and a drop-in `UpdateButton` titlebar control. |
+| [`SiriusUpdater`](src/Sirius.Updater)             | Core library. Zero XAML deps. `SiriusUpdater` + `SiriusFeedback` facades, GitHub release source, Issues sink, attachment storage, Device Flow, DPAPI token cache, MSIX installer, abstractions for everything. |
+| [`SiriusUpdater.WinUI`](src/Sirius.Updater.WinUI) | WinUI 3 surface. `ContentDialogUpdateUi` + `UpdateButton` for the updater; `ContentDialogFeedbackUi` + `FeedbackButton` for the feedback flow. |
 
 ## Quickstart
 
@@ -222,6 +239,131 @@ picks the right one for the current process. If none matches, the first
 `*.msix` / `*.msixbundle` attached to the release is used as a fallback.
 
 For full control, supply `Options.AssetSelector` — a `Func<UpdateAssetSelectionContext, UpdateAsset?>`.
+
+## Sirius Feedback
+
+A second facade — `SiriusFeedback` — turns user-reported bugs into GitHub
+issues with attachments, **sharing the updater's GitHub sign-in** so users
+don't have to authenticate twice.
+
+### Quickstart
+
+```csharp
+// Reuse the same updater so the cached GitHub token is shared.
+var feedback = new SiriusFeedback(new SiriusFeedbackOptions
+{
+    ProductName            = "MyApp",
+    Repository             = "owner/myapp-feedback",   // where issues are filed
+    AttachmentsRepository  = "owner/myapp-feedback",   // where blobs are committed
+    DefaultLabels          = new[] { "user-feedback" },
+})
+.SharingAuthWith(updater)   // <-- same DPAPI token, same sign-in
+.WithWinUI(myRootElement);  // <-- ContentDialog UI
+
+// Drop-in titlebar button. RequestFactory runs on click so logs are fresh.
+var button = new FeedbackButton(feedback)
+{
+    RequestFactory = () => new FeedbackRequest
+    {
+        Title       = "",
+        Body        = "",
+        Attachments =
+        {
+            FeedbackAttachment.FromFile(@"C:\logs\app.log"),
+            FeedbackAttachment.FromFile(latestScreenshotPath),
+        },
+        Diagnostics =
+        {
+            ["AppVersion"] = appVersion,
+            ["OS"]         = Environment.OSVersion.ToString(),
+        },
+    },
+};
+myTitleBar.Children.Add(button);
+```
+
+That's it. First click prompts for sign-in (Device Flow), subsequent clicks
+go straight to the compose dialog. The user types a title + body, unchecks
+any attachments they don't want shared, clicks **Send**, and gets back a
+"View on GitHub" link.
+
+### Configuration reference
+
+| Option | Default | Notes |
+|---|---|---|
+| `Repository` *(required)*    | —                                  | `owner/repo` where issues are filed. Can differ from the app's source repo. |
+| `AttachmentsRepository`      | same as `Repository`               | `owner/repo` where attachment blobs are committed. Decouple if you want a separate, mostly-empty repo for blobs. |
+| `AttachmentsBranch`          | `"feedback-attachments"`           | Orphan branch holding all attachment commits. Auto-created on first use with a seed README. |
+| `ProductName` *(required)*   | —                                  | Used in dialog strings and as part of the DPAPI entropy that shares the token with the updater. **Must match the updater's `ProductName`** for `SharingAuthWith` to pick up the cached token. |
+| `BodyTemplate`               | (built-in)                         | Function that renders the issue body from `(request, uploaded)`. Override for fully custom layouts. |
+| `DefaultLabels`              | empty                              | Applied to every issue in addition to any per-request labels. |
+| `OAuthClientId` / `OAuthScopes` | inherits updater defaults       | Same Device-Flow plumbing as the updater. `repo` scope required to write issues + push blobs on a private repo. |
+| `InlineTextMaxBytes`         | 64 KiB                             | Text under this is inlined in the issue body as a `<details>` block. Larger text is uploaded as a file. |
+| `PerAttachmentMaxBytes`      | 25 MiB                             | Hard per-file cap. Larger attachments are **omitted** with a visible warning in the issue. |
+| `TotalAttachmentMaxBytes`    | 100 MiB                            | Sum cap across all attachments. Excess is omitted with a warning. |
+| `Services.Storage`           | `GitHubRepoBranchStorage`          | Pluggable `IAttachmentStorage`. Default commits blobs to `AttachmentsRepository@AttachmentsBranch`. Swap for Azure Blob, S3, internal artifact stores, etc. |
+| `Services.Sink`              | `GitHubIssuesSink`                 | Pluggable `IFeedbackSink`. Default POSTs to GitHub Issues. |
+| `Services.TokenStore` / `Services.Authenticator` | inherited from updater via `SharingAuthWith` | Or pass explicitly. |
+| `Services.Ui`                | `NullFeedbackUi`                   | The WinUI lib provides `ContentDialogFeedbackUi` via `.WithWinUI(anchor)`. |
+
+### How attachments are handled
+
+Each `FeedbackAttachment` gets classified into one of three dispositions:
+
+| Disposition | When | Issue body rendering |
+|---|---|---|
+| **Inlined**   | Text attachment under `InlineTextMaxBytes`. | Full content in a collapsible `<details>` block. No upload, no commit. |
+| **Uploaded**  | Anything else under the per-attachment + total caps. | Committed to the attachments branch; images render inline as `![](raw-url)`, everything else as a link. |
+| **Omitted**   | Exceeds caps, user un-checked it in the dialog, or upload failed. | Listed in a warning section with the reason ("too large", "user-omitted", "upload failed: …"). |
+
+Raw URLs use the **immutable commit SHA**, not a branch ref, so they don't
+break if the branch is later rewritten.
+
+### Why a dedicated attachments branch?
+
+GitHub doesn't expose `user-attachments` (the drag-and-drop endpoint behind
+the issue compose page) as a stable public API, so Sirius can't use it.
+Committing blobs via the Contents/Git Data APIs is the only first-party
+mechanism that works headlessly and survives — but committing to `main`
+would pollute history. The orphan `feedback-attachments` branch is invisible
+to anyone browsing `main` yet still serves raw URLs that render in issues.
+
+### Privacy & safety
+
+- **Per-attachment opt-out**: every attachment shows up as a checkbox in
+  the compose dialog. Users can untick a log file before sending.
+- **Image previews**: image attachments show an inline thumbnail in the
+  dialog so users see exactly what's about to be uploaded.
+- **No silent uploads**: the attachments commit only happens after the user
+  clicks Send.
+- **Token scope**: the same `repo` scope as the updater. If you want
+  feedback to file into a different repo than the updater pulls from, set
+  `Repository` (and `AttachmentsRepository`) accordingly and ensure the
+  signed-in user has issue-write access there.
+
+### Architecture
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                        SiriusFeedback                              │
+│ (facade — SubmitAsync orchestrates compose → auth → upload → file) │
+└──────┬───────────────────┬───────────────────┬────────────────────┘
+       │                   │                   │
+┌──────▼──────┐    ┌───────▼───────┐    ┌──────▼──────┐
+│IFeedbackUi  │    │ITokenStore +  │    │IFeedbackSink│
+│ContentDialog│    │IAuthenticator │    │GitHubIssues │
+│FeedbackUi   │    │(shared with   │    │Sink         │
+│(compose +   │    │ SiriusUpdater)│    │             │
+│ result)     │    └───────────────┘    └──────┬──────┘
+└─────────────┘                                │
+                                       ┌───────▼────────────┐
+                                       │IAttachmentStorage  │
+                                       │GitHubRepoBranch    │
+                                       │Storage             │
+                                       │(orphan branch +    │
+                                       │ blob+tree+commit)  │
+                                       └────────────────────┘
+```
 
 ## Status
 

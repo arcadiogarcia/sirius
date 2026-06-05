@@ -29,6 +29,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Sirius.Updater.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Pack the repo README as the NuGet readme. -->
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
