@@ -22,9 +22,14 @@ namespace Sirius.Updater.Feedback.AttachmentStorage;
 ///   <item>Single commit per submission keeps history readable.</item>
 ///   <item>Orphan branch so attachments never appear in <c>main</c>'s
 ///         git log or diffs.</item>
-///   <item>Raw URLs (<c>raw.githubusercontent.com/{owner/repo}/{sha}/{path}</c>)
+///   <item>Web URLs (<c>github.com/{owner/repo}/raw/{sha}/{path}</c>)
 ///         are treated as first-class image sources by GitHub's issue
-///         renderer, so screenshots render inline.</item>
+///         renderer, so screenshots render inline. We deliberately
+///         avoid <c>raw.githubusercontent.com</c> because that host
+///         requires a signed query token for private/EMU repos and so
+///         404s in the browser; the <c>github.com/.../raw/...</c> form
+///         redirects via session cookies and works for both public and
+///         private repos.</item>
 ///   <item>Works against the same repo as the issue OR a dedicated
 ///         feedback-attachments repo (set via
 ///         <see cref="SiriusFeedbackOptions.AttachmentsRepository"/>).</item>
@@ -318,8 +323,18 @@ history, so it won't show up in `git log` on any other branch.
     static Uri ApiUri(string ownerRepo, string subPath) =>
         new($"https://api.github.com/repos/{ownerRepo.Trim('/')}/{subPath}");
 
+    // Use github.com/{owner}/{repo}/raw/{ref}/{path} rather than
+    // raw.githubusercontent.com/{...}. For PUBLIC repos both work
+    // identically — the former just 302-redirects to the latter. For
+    // PRIVATE / EMU repos, however, raw.githubusercontent.com requires
+    // a signed `?token=...` query parameter and otherwise 404s in the
+    // browser (even when the viewer is logged in for the repo), which
+    // breaks inline image embedding and link clicks. The github.com
+    // host inherits the viewer's session cookies and rewrites to a
+    // short-lived signed raw URL, so both <img src> and plain <a href>
+    // render correctly in the issue UI.
     static string BuildRawUrl(string ownerRepo, string commitOrBranch, string relativePath) =>
-        $"https://raw.githubusercontent.com/{ownerRepo.Trim('/')}/{Uri.EscapeDataString(commitOrBranch)}/" +
+        $"https://github.com/{ownerRepo.Trim('/')}/raw/{Uri.EscapeDataString(commitOrBranch)}/" +
         string.Join('/', Array.ConvertAll(relativePath.Split('/'), Uri.EscapeDataString));
 
     static string BuildPathPrefix(FeedbackContext ctx) =>
@@ -386,7 +401,10 @@ history, so it won't show up in `git log` on any other branch.
     }
     sealed class TreeRequest
     {
-        [JsonPropertyName("base_tree")] public string? BaseTree { get; set; }
+        // Omit when null — GitHub's Git Data API tolerates null for
+        // base_tree on the orphan-branch seed commit, but matching the
+        // IssueRequest convention is safer if the API ever tightens.
+        [JsonPropertyName("base_tree"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? BaseTree { get; set; }
         [JsonPropertyName("tree")]      public IReadOnlyList<TreeEntry> Tree { get; set; } = Array.Empty<TreeEntry>();
     }
     sealed class TreeEntry

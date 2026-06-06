@@ -270,10 +270,15 @@ public sealed class GitHubIssuesSink : IFeedbackSink
 
     sealed class IssueRequest
     {
+        // WhenWritingNull on every nullable field so we OMIT (not send
+        // null for) labels/assignees that the caller didn't specify.
+        // GitHub rejects null arrays on these fields with a 422
+        // "Invalid request: For 'properties/assignees', nil is not an
+        // array" — they must be absent rather than null.
         [JsonPropertyName("title")]     public string?       Title     { get; set; }
         [JsonPropertyName("body")]      public string?       Body      { get; set; }
-        [JsonPropertyName("labels")]    public List<string>? Labels    { get; set; }
-        [JsonPropertyName("assignees")] public List<string>? Assignees { get; set; }
+        [JsonPropertyName("labels"),    JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public List<string>? Labels    { get; set; }
+        [JsonPropertyName("assignees"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public List<string>? Assignees { get; set; }
     }
     sealed class IssueDto
     {
